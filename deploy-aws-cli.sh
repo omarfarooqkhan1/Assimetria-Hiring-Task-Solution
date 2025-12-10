@@ -26,11 +26,16 @@ ECR_FRONTEND="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/autoblog-fronten
 # Configure AWS CLI
 export AWS_DEFAULT_REGION=$AWS_REGION
 
-echo "Please ensure you have created the following ECR repositories manually:"
-echo "1. autoblog-backend"
-echo "2. autoblog-frontend"
-echo ""
-read -p "Press Enter to continue after creating the repositories..."
+echo "Verifying ECR repositories exist..."
+if ! aws ecr describe-repositories --repository-names autoblog-backend >/dev/null 2>&1; then
+    echo "Error: Repository 'autoblog-backend' not found. Please create it first."
+    exit 1
+fi
+
+if ! aws ecr describe-repositories --repository-names autoblog-frontend >/dev/null 2>&1; then
+    echo "Error: Repository 'autoblog-frontend' not found. Please create it first."
+    exit 1
+fi
 
 echo "Logging in to Amazon ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
