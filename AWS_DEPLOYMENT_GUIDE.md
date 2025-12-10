@@ -1,188 +1,186 @@
-# AutoBlog AWS Deployment Guide
+# AWS Deployment Guide for AutoBlog
 
-This guide will walk you through deploying the AutoBlog system to AWS using Docker containers.
+This guide documents the actual deployment process used for the AutoBlog application on AWS.
+
+## Current Deployment Status
+
+The application is currently deployed and running on AWS EC2 at: http://35.157.5.173
+
+Both frontend (port 80) and backend API (port 5000) are accessible.
 
 ## Prerequisites
 
 1. AWS Account with appropriate permissions
-2. AWS CLI installed and configured
-3. Docker installed locally
-4. Git installed
+2. EC2 Key Pair for SSH access
+3. Docker installed locally for building images
+4. AWS CLI configured with appropriate credentials
 
-## Architecture Overview
+## AWS Resource Setup
 
-The AutoBlog system consists of three main components:
-- **Frontend**: React application served by Nginx
-- **Backend**: Node.js Express API with TypeScript
-- **Database**: PostgreSQL
+### 1. Create ECR Repositories
 
-All components are containerized using Docker and orchestrated with Docker Compose.
+Create two ECR repositories:
+- `autoblog-backend`
+- `autoblog-frontend`
 
-## Deployment Steps
+### 2. Launch EC2 Instance
 
-### 1. Set up AWS ECR Repositories
+Launch an EC2 instance with the following specifications:
+- Amazon Linux 2023 AMI
+- t3.medium instance type (for optimal performance)
+- Security group allowing inbound traffic on ports 22, 80, and 5000
+- Associate your key pair for SSH access
 
-1. Log in to the AWS Console
-2. Navigate to Elastic Container Registry (ECR)
-3. Create two repositories:
-   - `autoblog-backend`
-   - `autoblog-frontend`
+## Local Build and Push Process
 
-### 2. Configure AWS CLI
-
-Ensure your AWS CLI is configured with credentials that have permissions to:
-- Create and manage ECR repositories
-- Push images to ECR
-- Manage EC2 instances
-- Create and manage IAM roles (if needed)
+### 1. Build Backend Image
 
 ```bash
-aws configure
-```
-
-### 3. Build and Push Docker Images
-
-Navigate to the project root and run:
-
-```bash
-# Set your AWS account ID
-export AWS_ACCOUNT_ID="your-aws-account-id"
-export AWS_DEFAULT_REGION="us-east-1"
-
-# Log in to ECR
-aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-
-# Build and push backend image
 cd backend
-docker build -t autoblog-backend:latest .
-docker tag autoblog-backend:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/autoblog-backend:latest
-docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/autoblog-backend:latest
-cd ..
+docker build --platform linux/amd64 -t autoblog-backend .
+docker tag autoblog-backend:latest YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-backend:latest
+```
 
-# Build and push frontend image
+### 2. Build Frontend Image
+
+```bash
 cd frontend
-docker build -t autoblog-frontend:latest .
-docker tag autoblog-frontend:latest $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/autoblog-frontend:latest
-docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/autoblog-frontend:latest
-cd ..
+npm run build
+docker build --platform linux/amd64 -t autoblog-frontend .
+docker tag autoblog-frontend:latest YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-frontend:latest
 ```
 
-### 4. Launch EC2 Instance
-
-1. Launch an EC2 instance with Amazon Linux 2 AMI
-2. Choose an instance type (t3.medium or larger recommended)
-3. Configure security groups to allow:
-   - SSH (port 22) from your IP
-   - HTTP (port 80) from anywhere (0.0.0.0/0)
-   - Custom TCP (port 5000) from anywhere (for API access)
-4. Create or use an existing key pair for SSH access
-
-### 5. Initialize EC2 Instance
-
-SSH into your EC2 instance and run the initialization script:
+### 3. Push Images to ECR
 
 ```bash
-# Connect to your EC2 instance
-ssh -i your-key.pem ec2-user@your-ec2-public-ip
+# Login to ECR
+aws ecr get-login-password --region YOUR_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com
 
-# Download and run the initialization script
-curl -O https://raw.githubusercontent.com/your-repo/main/infra/scripts/init-ec2.sh
-chmod +x init-ec2.sh
-./init-ec2.sh
+# Push images
+docker push YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-backend:latest
+docker push YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-frontend:latest
 ```
 
-### 6. Configure Environment Variables
+## EC2 Instance Setup
 
-Create and configure the environment file:
+### 1. SSH into EC2 Instance
 
 ```bash
+chmod 400 your-key.pem
+ssh -i your-key.pem ec2-user@YOUR_EC2_PUBLIC_IP
+```
+
+### 2. Install Docker and Docker Compose
+
+```bash
+sudo dnf update -y
+sudo dnf install docker docker-compose -y
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ec2-user
+```
+
+### 3. Create Application Directory
+
+```bash
+sudo mkdir -p /opt/autoblog
+sudo chown ec2-user:ec2-user /opt/autoblog
 cd /opt/autoblog
-cp .env.template .env
-nano .env
 ```
 
-Update the following variables:
-- `POSTGRES_PASSWORD`: Set a strong password for PostgreSQL
-- `AWS_ACCOUNT_ID`: Your AWS account ID
-- `HUGGINGFACE_API_KEY`: (Optional) Your HuggingFace API key for AI article generation
-- `SESSION_SECRET`: A random string for session encryption
+### 4. Create Environment File
 
-### 7. Deploy the Application
-
-Run the deployment script:
+Create a `.env` file with your configuration:
 
 ```bash
-cd /opt/autoblog
-./deploy.sh
+cat > .env << 'EOF'
+POSTGRES_USER=autoblog
+POSTGRES_PASSWORD=your_secure_password
+POSTGRES_DB=autoblog
+SESSION_SECRET=your_session_secret
+HUGGINGFACE_API_KEY=your_huggingface_api_key
+AWS_ACCOUNT_ID=your_aws_account_id
+AWS_DEFAULT_REGION=your_aws_region
+ECR_BACKEND=your_account_id.dkr.ecr.your_region.amazonaws.com/autoblog-backend
+ECR_FRONTEND=your_account_id.dkr.ecr.your_region.amazonaws.com/autoblog-frontend
+EOF
 ```
 
-### 8. Set up Admin User (Optional)
+### 5. Copy docker-compose.yml
 
-After deployment, you can set up an admin user:
+Copy the `infra/docker-compose.yml` file to `/opt/autoblog/docker-compose.yml` on your EC2 instance.
+
+### 6. Deploy Application
 
 ```bash
-# Get the public IP of your EC2 instance
-EC2_IP=$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)
+# Login to ECR
+aws ecr get-login-password --region your_region | sudo docker login --username AWS --password-stdin your_account_id.dkr.ecr.your_region.amazonaws.com
 
-# Create admin user
-curl -X POST http://$EC2_IP/api/auth/setup -H "Content-Type: application/json" -d '{"password": "your-admin-password"}'
+# Pull and start services
+sudo docker-compose pull
+sudo docker-compose up -d
 ```
 
-## Monitoring and Maintenance
+## Verification
 
-### View Logs
+After deployment, verify that all services are running:
 
 ```bash
-cd /opt/autoblog
-docker-compose logs -f
+sudo docker-compose ps
 ```
 
-### Restart Services
+You should see three containers running:
+- autoblog-db (PostgreSQL)
+- autoblog-backend (Node.js API)
+- autoblog-frontend (Nginx serving React app)
+
+Check the logs to ensure there are no errors:
 
 ```bash
-cd /opt/autoblog
-docker-compose restart
+sudo docker-compose logs backend
+sudo docker-compose logs frontend
+sudo docker-compose logs database
 ```
 
-### Update Application
+## Accessing the Application
 
-To update the application with new code:
-
-1. Rebuild and push new Docker images to ECR
-2. Run the deployment script again:
-   ```bash
-   cd /opt/autoblog
-   ./deploy.sh
-   ```
+Once deployed, you can access:
+- Frontend: http://YOUR_EC2_PUBLIC_IP
+- Backend API: http://YOUR_EC2_PUBLIC_IP:5000
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Services not starting**: Check logs with `docker-compose logs`
-2. **Database connection issues**: Verify PostgreSQL credentials in .env
-3. **Permission denied**: Ensure proper IAM permissions for ECR operations
+1. **Permission denied errors with Docker**: Ensure you've added your user to the docker group and logged out/in.
 
-### Health Checks
+2. **Platform compatibility issues**: Always build images with `--platform linux/amd64` when deploying to EC2.
 
-Check service health:
+3. **Database connection issues**: Verify the DATABASE_URL in your environment variables and ensure the database container is running.
+
+4. **HuggingFace API errors**: Check that your API key is correctly configured and that you have access to the model.
+
+### Checking Logs
+
+To diagnose issues, check the container logs:
+
 ```bash
-curl http://localhost:5000/api/health
+sudo docker-compose logs backend
+sudo docker-compose logs frontend
+sudo docker-compose logs database
 ```
 
-## Security Considerations
+## Updating the Application
 
-1. Change default passwords in production
-2. Use HTTPS in production (consider AWS Certificate Manager + Application Load Balancer)
-3. Restrict security group access to only necessary IPs
-4. Regularly update Docker images and system packages
-5. Use IAM roles instead of access keys when possible
+To update the application:
 
-## Scaling Options
+1. Build and push new Docker images from your local machine
+2. SSH into the EC2 instance
+3. Pull the latest images and restart services:
 
-For production deployments, consider:
-1. Using AWS ECS or EKS for container orchestration
-2. Using RDS instead of containerized PostgreSQL
-3. Adding a load balancer for high availability
-4. Using CloudFront CDN for frontend assets
-5. Setting up auto-scaling groups for EC2 instances
+```bash
+cd /opt/autoblog
+sudo docker-compose pull
+sudo docker-compose down
+sudo docker-compose up -d
+```

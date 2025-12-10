@@ -41,6 +41,8 @@ graph TD
 - Stores Docker images:
   - `autoblog-frontend:latest`
   - `autoblog-backend:latest`
+- Located in eu-central-1 region
+- Account ID: 651045361998
 
 ### 4. AWS EC2 Instance
 - Single instance hosting all services
@@ -49,6 +51,7 @@ graph TD
   - PostgreSQL database
   - Backend API service
   - Frontend web application
+- Currently deployed at: 35.157.5.173
 
 ## Deployment Flow
 
@@ -98,42 +101,49 @@ SESSION_SECRET=another_secure_secret_here
 HUGGINGFACE_API_KEY=your_huggingface_api_key
 
 # AWS Configuration
-AWS_DEFAULT_REGION=us-east-1
-AWS_ACCOUNT_ID=your_aws_account_id
+AWS_DEFAULT_REGION=eu-central-1
+AWS_ACCOUNT_ID=651045361998
+ECR_BACKEND=651045361998.dkr.ecr.eu-central-1.amazonaws.com/autoblog-backend
+ECR_FRONTEND=651045361998.dkr.ecr.eu-central-1.amazonaws.com/autoblog-frontend
 ```
 
 ## Deployment Commands
 
 ### On EC2 Instance
 ```bash
+# Login to ECR
+aws ecr get-login-password --region eu-central-1 | sudo docker login --username AWS --password-stdin 651045361998.dkr.ecr.eu-central-1.amazonaws.com
+
 # Pull and run latest images
 cd /opt/autoblog
-./infra/scripts/ec2-deploy.sh
+sudo docker-compose pull
+sudo docker-compose down
+sudo docker-compose up -d
 
 # View logs
-docker-compose logs -f
+sudo docker-compose logs -f
 
 # Check status
-docker-compose ps
+sudo docker-compose ps
 
 # Restart services
-docker-compose restart
+sudo docker-compose restart
 ```
 
 ## Access Points
 
 After deployment, the application will be accessible at:
 
-- **Frontend**: `http://EC2_PUBLIC_IP`
-- **Backend API**: `http://EC2_PUBLIC_IP:5000/api`
-- **Health Check**: `http://EC2_PUBLIC_IP:5000/api/health`
+- **Frontend**: `http://35.157.5.173`
+- **Backend API**: `http://35.157.5.173:5000/api`
+- **Health Check**: `http://35.157.5.173:5000/api/health`
 
 ## Maintenance
 
 ### Updating the Application
 1. Push new code to GitHub
 2. Run CodeBuild to build and push new images
-3. On EC2 instance, run: `./infra/scripts/ec2-deploy.sh`
+3. On EC2 instance, run the deployment commands above
 
 ### Backup and Recovery
 - Database is persisted in a Docker volume
@@ -146,3 +156,9 @@ While this deployment uses a single EC2 instance as required, for production env
 - Adding a load balancer for high availability
 - Using ECS for better container orchestration
 - Implementing auto-scaling groups
+
+## Current Deployment Status
+
+The application is currently deployed and running on AWS EC2 at: http://35.157.5.173
+
+Both frontend (port 80) and backend API (port 5000) are accessible.
