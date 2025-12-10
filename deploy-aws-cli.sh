@@ -19,6 +19,22 @@ read -p "Enter your AWS Account ID: " AWS_ACCOUNT_ID
 read -p "Enter your AWS Region (default: eu-central-1): " AWS_REGION
 AWS_REGION=${AWS_REGION:-eu-central-1}
 
+# Prompt for application configuration
+read -p "Enter database password (minimum 8 characters): " POSTGRES_PASSWORD
+read -p "Enter session secret (random string for security): " SESSION_SECRET
+read -p "Enter your Hugging Face API key (optional, press Enter to skip): " HUGGINGFACE_API_KEY
+
+# Validate inputs
+if [[ ${#POSTGRES_PASSWORD} -lt 8 ]]; then
+    echo "Error: Database password must be at least 8 characters long."
+    exit 1
+fi
+
+if [[ -z "$SESSION_SECRET" ]]; then
+    echo "Error: Session secret is required."
+    exit 1
+fi
+
 # Set variables
 ECR_BACKEND="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/autoblog-backend"
 ECR_FRONTEND="$AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/autoblog-frontend"
@@ -61,7 +77,24 @@ echo "========================================="
 echo "Docker images pushed successfully!"
 echo "========================================="
 echo ""
-echo "To deploy on EC2:"
+echo "To deploy on EC2, create an environment file with the following content:"
+echo "====================================================================="
+echo "POSTGRES_USER=autoblog"
+echo "POSTGRES_PASSWORD=$POSTGRES_PASSWORD"
+echo "POSTGRES_DB=autoblog"
+echo "SESSION_SECRET=$SESSION_SECRET"
+if [[ -n "$HUGGINGFACE_API_KEY" ]]; then
+    echo "HUGGINGFACE_API_KEY=$HUGGINGFACE_API_KEY"
+else
+    echo "# HUGGINGFACE_API_KEY=your_huggingface_api_key # Optional"
+fi
+echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
+echo "AWS_DEFAULT_REGION=$AWS_REGION"
+echo "ECR_BACKEND=$ECR_BACKEND"
+echo "ECR_FRONTEND=$ECR_FRONTEND"
+echo "====================================================================="
+echo ""
+echo "Then follow these deployment steps on your EC2 instance:"
 echo "1. Launch an EC2 instance with Amazon Linux 2"
 echo "2. SSH into your instance"
 echo "3. Run the following commands:"
@@ -83,18 +116,8 @@ echo "   # Create app directory"
 echo "   sudo mkdir -p /opt/autoblog"
 echo "   sudo chown ec2-user:ec2-user /opt/autoblog"
 echo ""
-echo "   # Create environment file"
-echo "   cat > /opt/autoblog/.env << 'EOF'"
-echo "   POSTGRES_USER=autoblog"
-echo "   POSTGRES_PASSWORD=your_secure_password"
-echo "   POSTGRES_DB=autoblog"
-echo "   SESSION_SECRET=your_session_secret"
-echo "   HUGGINGFACE_API_KEY=your_huggingface_api_key"
-echo "   AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
-echo "   AWS_DEFAULT_REGION=$AWS_REGION"
-echo "   ECR_BACKEND=$ECR_BACKEND"
-echo "   ECR_FRONTEND=$ECR_FRONTEND"
-echo "   EOF"
+echo "   # Create environment file (copy the content shown above)"
+echo "   nano /opt/autoblog/.env  # Paste the environment variables here"
 echo ""
 echo "   # Download and run deployment script"
 echo "   cd /opt/autoblog"
