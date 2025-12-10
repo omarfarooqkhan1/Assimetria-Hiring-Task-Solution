@@ -57,7 +57,7 @@ An automated blog platform that generates articles. Built with React, Node.js, P
 │   └── scripts/           # Deployment scripts
 ├── scripts/               # Database backup scripts
 └── docs/
-   └── ARCHITECTURE.md    # Architecture documentation
+  └── ARCHITECTURE.md    # Architecture documentation
 ```
 
 ## Quick Start
@@ -123,35 +123,55 @@ This starts:
 1. **Set up AWS Resources**
    - Create ECR repositories: `autoblog-backend` and `autoblog-frontend`
    - Create CodeBuild project using `infra/buildspec.yml`
-   - Launch EC2 instance (Amazon Linux 2) with appropriate security groups
+   - Launch EC2 instance (Amazon Linux 2023) with appropriate security groups
 
 2. **Configure CodeBuild Environment Variables**
    - `AWS_ACCOUNT_ID`: Your AWS account ID
-   - `AWS_DEFAULT_REGION`: Your preferred region (e.g., us-east-1)
+   - `AWS_DEFAULT_REGION`: Your preferred region (e.g., eu-central-1)
 
 3. **Initialize EC2 Instance**
    ```bash
    # SSH into your EC2 instance
    ssh -i your-key.pem ec2-user@your-ec2-public-ip
    
-   # Run initialization script
-   curl -O https://raw.githubusercontent.com/your-repo/main/infra/scripts/init-ec2.sh
-   chmod +x init-ec2.sh
-   ./init-ec2.sh
+   # Install Docker and Docker Compose
+   sudo dnf update -y
+   sudo dnf install docker docker-compose -y
+   sudo systemctl start docker
+   sudo systemctl enable docker
+   sudo usermod -aG docker ec2-user
+   
+   # Create app directory
+   sudo mkdir -p /opt/autoblog
+   sudo chown ec2-user:ec2-user /opt/autoblog
+   cd /opt/autoblog
    ```
 
 4. **Configure Environment Variables on EC2**
    ```bash
    cd /opt/autoblog
-   cp .env.template .env
-   # Edit .env with your configuration
-   nano .env
+   # Create .env file with your configuration
+   cat > .env << 'EOF'
+   POSTGRES_USER=autoblog
+   POSTGRES_PASSWORD=your_secure_password
+   POSTGRES_DB=autoblog
+   SESSION_SECRET=your_session_secret
+   HUGGINGFACE_API_KEY=your_huggingface_api_key
+   AWS_ACCOUNT_ID=your_aws_account_id
+   AWS_DEFAULT_REGION=your_aws_region
+   ECR_BACKEND=your_account_id.dkr.ecr.your_region.amazonaws.com/autoblog-backend
+   ECR_FRONTEND=your_account_id.dkr.ecr.your_region.amazonaws.com/autoblog-frontend
+   EOF
    ```
 
 5. **Deploy Application on EC2**
    ```bash
-   cd /opt/autoblog
-   ./infra/scripts/ec2-deploy.sh
+   # Login to ECR
+   aws ecr get-login-password --region your_region | sudo docker login --username AWS --password-stdin your_account_id.dkr.ecr.your_region.amazonaws.com
+   
+   # Pull and start services
+   sudo docker-compose pull
+   sudo docker-compose up -d
    ```
 
 ## API Documentation
@@ -227,15 +247,11 @@ Articles are generated:
 ./scripts/restore-db.sh backups/blog_backup_TIMESTAMP.sql.gz
 ```
 
-## AWS Deployment
+## Current Deployment Status
 
-See detailed instructions in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The application is currently deployed and running on AWS EC2 at: http://35.157.5.173
 
-Quick overview:
-1. Create ECR repositories for backend and frontend
-2. Set up CodeBuild with `infra/buildspec.yml`
-3. Launch EC2 instance and run `infra/scripts/init-ec2.sh`
-4. Configure environment and run `deploy.sh`
+Both frontend (port 80) and backend API (port 5000) are accessible.
 
 ## Author
 
