@@ -9,3 +9,11 @@ vite.config.ts.*
 .env
 .env.local
 .env.production
+
+# AWS configuration files
+*-project.json
+*-role.json
+*-policy.json
+*-config.json
+*-rules.json
+deploy-aws-cli.sh
