@@ -14,6 +14,7 @@ COPY src/ ./src/
 COPY tsconfig.json ./
 COPY vite.config.ts ./
 COPY index.html ./
+COPY ../shared/ ./shared/
 
 # Build the frontend
 RUN npm run build
