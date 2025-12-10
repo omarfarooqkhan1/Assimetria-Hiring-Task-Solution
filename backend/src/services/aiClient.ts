@@ -44,7 +44,8 @@ function calculateReadingTime(content: string): number {
 }
 
 async function generateWithHuggingFace(prompt: string): Promise<string> {
-  const HF_API_URL = "https://router.huggingface.co/hf-inference/models/microsoft/Phi-3-mini-4k-instruct/v1/chat/completions";
+  // Use the correct HuggingFace router API endpoint for chat completions
+  const HF_API_URL = "https://router.huggingface.co/v1/chat/completions";
   
   const apiKey = process.env.HUGGINGFACE_API_KEY;
   
@@ -62,7 +63,7 @@ async function generateWithHuggingFace(prompt: string): Promise<string> {
       method: "POST",
       headers,
       body: JSON.stringify({
-        model: "microsoft/Phi-3-mini-4k-instruct",
+        model: "meta-llama/Llama-3.1-8B-Instruct",
         messages: [
           { role: "user", content: prompt }
         ],
@@ -154,8 +155,7 @@ export async function generateArticle(): Promise<GeneratedArticle> {
   
   log(`Generating article about: ${topic} (${category})`, "ai");
 
-  const prompt = `<|user|>
-Write a professional blog article about "${topic}" in the ${category} sector.
+  const prompt = `Write a professional blog article about "${topic}" in the ${category} sector.
 
 Requirements:
 - Title should be engaging and SEO-friendly
@@ -167,13 +167,12 @@ Format your response as:
 TITLE: [Your title here]
 SUMMARY: [A 1-2 sentence summary]
 CONTENT:
-[Your article content here]
-<|end|>
-<|assistant|>`;
+[Your article content here]`;
 
   try {
     const response = await generateWithHuggingFace(prompt);
     
+    // Try to parse the response
     const titleMatch = response.match(/TITLE:\s*(.+?)(?=\n|SUMMARY:)/i);
     const summaryMatch = response.match(/SUMMARY:\s*(.+?)(?=\n|CONTENT:)/is);
     const contentMatch = response.match(/CONTENT:\s*([\s\S]+)/i);
