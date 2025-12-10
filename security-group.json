@@ -1,0 +1,5 @@
+{
+    "Description": "Security group for AutoBlog application",
+    "GroupName": "autoblog-security-group",
+    "VpcId": "vpc-your-vpc-id"
+}
