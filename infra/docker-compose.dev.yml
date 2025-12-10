@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: autoblog-db-dev
+    environment:
+      POSTGRES_USER: autoblog
+      POSTGRES_PASSWORD: autoblog_dev
+      POSTGRES_DB: autoblog
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - autoblog-network-dev
+
+volumes:
+  postgres_data_dev:
+
+networks:
+  autoblog-network-dev:
+    driver: bridge

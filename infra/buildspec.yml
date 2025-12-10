@@ -1,0 +1,64 @@
+version: 0.2
+
+env:
+  variables:
+    AWS_DEFAULT_REGION: "us-east-1"
+    ECR_REPOSITORY_BACKEND: "autoblog-backend"
+    ECR_REPOSITORY_FRONTEND: "autoblog-frontend"
+
+phases:
+  install:
+    runtime-versions:
+      docker: 20
+    commands:
+      - echo "Installing dependencies..."
+      
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+      - BACKEND_REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_BACKEND
+      - FRONTEND_REPO_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$ECR_REPOSITORY_FRONTEND
+      
+  build:
+    commands:
+      - echo Build started on `date`
+      
+      - echo Building backend Docker image...
+      - cd ../backend
+      - docker build -t $ECR_REPOSITORY_BACKEND:$IMAGE_TAG .
+      - docker tag $ECR_REPOSITORY_BACKEND:$IMAGE_TAG $BACKEND_REPO_URI:$IMAGE_TAG
+      - docker tag $ECR_REPOSITORY_BACKEND:$IMAGE_TAG $BACKEND_REPO_URI:latest
+      - cd ..
+      
+      - echo Building frontend Docker image...
+      - cd ../frontend
+      - docker build -t $ECR_REPOSITORY_FRONTEND:$IMAGE_TAG .
+      - docker tag $ECR_REPOSITORY_FRONTEND:$IMAGE_TAG $FRONTEND_REPO_URI:$IMAGE_TAG
+      - docker tag $ECR_REPOSITORY_FRONTEND:$IMAGE_TAG $FRONTEND_REPO_URI:latest
+      - cd ../infra
+
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      
+      - echo Pushing backend image to ECR...
+      - docker push $BACKEND_REPO_URI:$IMAGE_TAG
+      - docker push $BACKEND_REPO_URI:latest
+      
+      - echo Pushing frontend image to ECR...
+      - docker push $FRONTEND_REPO_URI:$IMAGE_TAG
+      - docker push $FRONTEND_REPO_URI:latest
+      
+      - echo Writing image definitions file...
+      - printf '{"ImageURI":"%s"}' $BACKEND_REPO_URI:$IMAGE_TAG > backend-image.json
+      - printf '{"ImageURI":"%s"}' $FRONTEND_REPO_URI:$IMAGE_TAG > frontend-image.json
+
+artifacts:
+  files:
+    - backend-image.json
+    - frontend-image.json
+    - infra/scripts/deploy.sh
+    - infra/docker-compose.yml
