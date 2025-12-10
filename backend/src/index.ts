@@ -9,8 +9,22 @@ import { fileURLToPath } from "url";
 // Load environment variables from .env file
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Safe path resolution with fallback for environments where import.meta.url is undefined
+let __filename: string = '';
+let __dirname: string = '';
+
+try {
+  if (typeof import.meta.url === 'string') {
+    __filename = fileURLToPath(import.meta.url);
+    __dirname = path.dirname(__filename);
+  } else {
+    // Fallback for environments where import.meta.url is not available
+    __dirname = process.cwd();
+  }
+} catch (error) {
+  // Fallback for any errors during path resolution
+  __dirname = process.cwd();
+}
 
 const app = express();
 const httpServer = createServer(app);
@@ -97,7 +111,7 @@ app.use((req, res, next) => {
   const port = parseInt(process.env.PORT || "5000", 10);
   httpServer.listen(
     port, // Simplified to just pass the port
-    "localhost",
+    "0.0.0.0", // Changed from localhost to 0.0.0.0 for Docker
     async () => {
       log(`serving on port ${port}`);
       
