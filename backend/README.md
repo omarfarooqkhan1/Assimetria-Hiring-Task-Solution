@@ -27,7 +27,7 @@ src/
 ├── middleware/
 │   └── rateLimit.ts   # Rate limiting middleware
 └── models/
-    └── index.ts       # Drizzle schema definitions
+   └── index.ts       # Drizzle schema definitions
 ```
 
 ## API Endpoints
@@ -87,6 +87,26 @@ docker run -p 5000:5000 \
   -e DATABASE_URL=postgresql://... \
   -e SESSION_SECRET=your-secret \
   autoblog-backend
+```
+
+## AWS Deployment
+
+The backend is currently deployed on AWS EC2 at: http://35.157.5.173:5000
+
+### Docker Build for AWS Deployment
+
+When building for AWS deployment, ensure you specify the platform:
+
+```bash
+# Build for AWS EC2 (linux/amd64)
+docker build --platform linux/amd64 -t autoblog-backend .
+
+# Tag for ECR
+docker tag autoblog-backend:latest YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-backend:latest
+
+# Push to ECR
+aws ecr get-login-password --region YOUR_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com
+docker push YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-backend:latest
 ```
 
 ## Article Generation

@@ -70,6 +70,27 @@ docker build -t autoblog-frontend .
 docker run -p 80:80 autoblog-frontend
 ```
 
+## AWS Deployment
+
+The frontend is currently deployed on AWS EC2 at: http://35.157.5.173
+
+### Docker Build for AWS Deployment
+
+When building for AWS deployment, ensure you specify the platform:
+
+```bash
+# Build for AWS EC2 (linux/amd64)
+npm run build
+docker build --platform linux/amd64 -t autoblog-frontend .
+
+# Tag for ECR
+docker tag autoblog-frontend:latest YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-frontend:latest
+
+# Push to ECR
+aws ecr get-login-password --region YOUR_REGION | docker login --username AWS --password-stdin YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com
+docker push YOUR_ACCOUNT_ID.dkr.ecr.YOUR_REGION.amazonaws.com/autoblog-frontend:latest
+```
+
 ## Features
 
 - Modern, responsive design
