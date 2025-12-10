@@ -162,9 +162,10 @@ CREATE TABLE articles (
 
 ### AWS Resources
 
-1. **EC2 Instance** (t2.micro or t3.micro for free tier)
+1. **EC2 Instance** (t3.medium for optimal performance)
    - Runs all Docker containers
    - Public IP for web access
+   - Currently deployed at: 35.157.5.173
 
 2. **ECR Repositories**
    - `autoblog-backend` - Backend Docker images
@@ -236,9 +237,15 @@ For future scaling, consider:
 
 ## Cost Optimization
 
-The current architecture is optimized for AWS free tier:
+The current architecture is optimized for cost efficiency:
 
-- EC2: t2.micro/t3.micro (750 hours/month free)
-- ECR: 500MB storage free
-- CodeBuild: 100 build minutes/month free
-- Data Transfer: 100GB free
+- EC2: t3.medium (consider reserved instances for savings)
+- ECR: Pay-per-use storage
+- CodeBuild: Pay-per-minute build time
+- Data Transfer: Optimized through CDN potential
+
+## Current Deployment Status
+
+The application is currently deployed and running on AWS EC2 at: http://35.157.5.173
+
+Both frontend (port 80) and backend API (port 5000) are accessible.
