@@ -1,16 +1,4 @@
-// Export types from shared schema
-export type { Article, InsertArticle, User, InsertUser } from "../../../shared/schema";
+// Export types from shared types file
+export type { Article, User, HealthStatus, ApiResponse } from "../../../shared/types";
 
 // Define additional frontend-specific types
-export interface HealthStatus {
-  status: "healthy" | "unhealthy";
-  timestamp: string;
-  details?: Record<string, any>;
-}
-
-export interface ApiResponse<T> {
-  success: boolean;
-  data?: T;
-  error?: string;
-  message?: string;
-}
