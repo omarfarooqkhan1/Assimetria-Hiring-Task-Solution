@@ -53,6 +53,21 @@ if ! aws ecr describe-repositories --repository-names autoblog-frontend >/dev/nu
     exit 1
 fi
 
+# Test Docker build for both frontend and backend locally first
+echo "Testing local Docker builds..."
+cd backend
+echo "Building backend Docker image locally..."
+docker build -t autoblog-backend:local-test .
+cd ..
+
+cd frontend
+echo "Building frontend Docker image locally..."
+docker build -t autoblog-frontend:local-test .
+cd ..
+
+echo "Local Docker builds successful!"
+
+# Login to ECR
 echo "Logging in to Amazon ECR..."
 aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
 
