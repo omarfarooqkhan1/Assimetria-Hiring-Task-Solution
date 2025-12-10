@@ -53,11 +53,6 @@ if ! aws ecr describe-repositories --repository-names autoblog-frontend >/dev/nu
     exit 1
 fi
 
-# Prepare shared types for frontend build
-echo "Preparing shared types for frontend build..."
-mkdir -p frontend/shared
-cp shared/types.ts frontend/shared/
-
 # Test Docker build for both frontend and backend locally first
 echo "Testing local Docker builds..."
 cd backend
@@ -71,9 +66,6 @@ docker build -t autoblog-frontend:local-test .
 cd ..
 
 echo "Local Docker builds successful!"
-
-# Clean up shared types copy
-rm -f frontend/shared/types.ts
 
 # Login to ECR
 echo "Logging in to Amazon ECR..."
@@ -89,16 +81,11 @@ cd ..
 
 # Build and push frontend image
 echo "Building and pushing frontend image..."
-# Prepare shared types for frontend build
-mkdir -p frontend/shared
-cp shared/types.ts frontend/shared/
 cd frontend
 docker build -t autoblog-frontend:latest .
 docker tag autoblog-frontend:latest $ECR_FRONTEND:latest
 docker push $ECR_FRONTEND:latest
 cd ..
-# Clean up shared types copy
-rm -f frontend/shared/types.ts
 
 echo ""
 echo "========================================="
