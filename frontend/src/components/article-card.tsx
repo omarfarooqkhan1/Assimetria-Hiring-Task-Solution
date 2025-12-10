@@ -85,7 +85,7 @@ export function ArticleCard({ article, index = 0 }: ArticleCardProps) {
           {tags.length > 0 && (
             <div className="flex items-center gap-2 flex-wrap mb-4">
               <Tag className="w-3.5 h-3.5 text-muted-foreground" />
-              {tags.map((tag) => (
+              {tags.map((tag: string) => (
                 <Badge
                   key={tag}
                   variant="outline"
